@@ -128,7 +128,7 @@ dimensionless = registry.dimensionless
 
 # Change default printing format
 @pint.register_unit_format('edata')
-def format_custom(unit, _, **options):
+def format_custom(unit, registry, **options):
     unit_str = pint.formatter(
         unit.items(),
         as_ratio=True,
