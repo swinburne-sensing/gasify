@@ -102,6 +102,10 @@ class Quantity(registry.Quantity):
             spec = self.default_format
 
         formatted = super().__format__(spec)
+
+        if ' ' not in formatted:
+            return formatted
+
         formatted_num, formatted_unit = formatted.split(' ', 1)
 
         if formatted_unit.strip() == '%':
