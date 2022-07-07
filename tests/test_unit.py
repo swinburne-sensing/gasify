@@ -80,7 +80,7 @@ class UnmodifiedTestCase(_QuantityTestCase):
 
         self.assertQuantity(q, 1, unit.registry.ohm / unit.registry.millimeter)
 
-        self.assertEqual('1 Ω/mm', str(q))
+        self.assertEqual('1 kΩ/m', str(q))
 
     def test_mixed_str_product(self):
         q = unit.Quantity(1, unit.registry.ohm * unit.registry.meter)

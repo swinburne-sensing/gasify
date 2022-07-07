@@ -18,7 +18,16 @@ __all__ = [
     'registry',
     'Quantity',
     'Unit',
-    'dimensionless'
+    'dimensionless',
+    'is_quantity',
+    'is_unit',
+    'parse',
+    'parse_unit',
+    'parse_timedelta',
+    'parse_magnitude',
+    'TParseQuantity',
+    'TParseUnit',
+    'TParseTimeDelta'
 ]
 
 
@@ -119,7 +128,7 @@ dimensionless = registry.dimensionless
 
 # Change default printing format
 @pint.register_unit_format('edata')
-def format_custom(unit, registry, **options):
+def format_custom(unit, _, **options):
     unit_str = pint.formatter(
         unit.items(),
         as_ratio=True,
@@ -152,24 +161,34 @@ if pint_pandas is not None:
 
 
 # Type hints
-T_PARSE_QUANTITY = typing.Union[Quantity, str, float, int]
-T_PARSE_UNIT = typing.Union[Unit, Quantity, str]
-T_PARSE_TIMEDELTA = typing.Union[timedelta, Quantity, str, float, int]
-
-
-def is_unit(x: typing.Any) -> bool:
-    return isinstance(x, Unit)
+TParseQuantity = typing.Union[Quantity, str, float, int]
+TParseUnit = typing.Union[Unit, Quantity, str]
+TParseTimeDelta = typing.Union[timedelta, Quantity, str, float, int]
 
 
 def is_quantity(x: typing.Any) -> bool:
+    """ Test if object is an instance of Quantity.
+
+    :param x: object to test
+    :return: True if x is an instance of Quantity or a subclass of Quantity
+    """
     return isinstance(x, Quantity)
 
 
-def parse_unit(x: T_PARSE_UNIT) -> Unit:
+def is_unit(x: typing.Any) -> bool:
+    """ Test if object is an instance of Unit.
+
+    :param x: object to test
+    :return: True if x is an instance of Unit or a subclass of Unit
+    """
+    return isinstance(x, Unit)
+
+
+def parse_unit(x: TParseUnit) -> Unit:
     """ Parse arbitrary input to a Unit from the registry.
 
     :param x: input str
-    :return: Unit
+    :return: parsed Unit
     """
     if is_unit(x):
         # Already a Unit
@@ -188,14 +207,14 @@ def parse_unit(x: T_PARSE_UNIT) -> Unit:
     raise ParseError(f"Unknown unit \"{x}\"")
 
 
-def parse(x: T_PARSE_QUANTITY, to_unit: typing.Optional[T_PARSE_UNIT] = None,
+def parse(x: TParseQuantity, to_unit: typing.Optional[TParseUnit] = None,
           mag_round: typing.Optional[int] = None) -> Quantity:
     """ Parse arbitrary input to a Quantity of specified unit.
 
     :param x: input str, number or Quantity
     :param to_unit: str or Unit to convert parsed values to
-    :param mag_round:
-    :return: Quantity with parsed magnitude and specified unit
+    :param mag_round: if specified, round the magnitude of the Quantity to mag_round places
+    :return: parsed Quantity
     """
     if x is None:
         raise ParseError('Cannot convert NoneType to Quantity')
@@ -235,25 +254,29 @@ def parse(x: T_PARSE_QUANTITY, to_unit: typing.Optional[T_PARSE_UNIT] = None,
     return x
 
 
-def parse_magnitude(x: T_PARSE_QUANTITY, magnitude_unit: T_PARSE_UNIT,
-                    input_unit: typing.Optional[T_PARSE_UNIT] = None) -> float:
+def parse_magnitude(x: TParseQuantity, magnitude_unit: TParseUnit = None,
+                    input_unit: typing.Optional[TParseUnit] = None) -> float:
     """ Shortcut method to parse as value, optionally converting to specified unit before returning the magnitude.
 
     :param x: input str, number or Quantity
     :param magnitude_unit: str or Unit to convert parsed values to before conversion to magnitude
     :param input_unit: str or Unit to convert parsed values to
-    :return:
+    :return: Quantity magnitude as specified unit or as the parsed unit
     """
-    magnitude_unit = parse_unit(magnitude_unit)
+    if magnitude_unit is not None:
+        magnitude_unit = parse_unit(magnitude_unit)
 
     if input_unit is None:
         # Assume default parsing unit is same as casting unit
         input_unit = magnitude_unit
 
-    return parse(x, input_unit).m_as(magnitude_unit)
+    if magnitude_unit is not None:
+        return parse(x, input_unit).m_as(magnitude_unit)
+    else:
+        return parse(x, input_unit).magnitude
 
 
-def parse_timedelta(x: T_PARSE_TIMEDELTA) -> timedelta:
+def parse_timedelta(x: TParseTimeDelta) -> timedelta:
     """
 
     :param x:
@@ -277,8 +300,8 @@ def parse_timedelta(x: T_PARSE_TIMEDELTA) -> timedelta:
     return timedelta(seconds=x_secs)
 
 
-def converter(to_unit: typing.Optional[T_PARSE_UNIT] = None,
-              optional: bool = False) -> typing.Callable[[T_PARSE_QUANTITY], Quantity]:
+def converter(to_unit: typing.Optional[TParseUnit] = None,
+              optional: bool = False) -> typing.Callable[[TParseQuantity], Quantity]:
     """ Create wrapper for parse decorator with a pre-defined unit. Useful with the attrs library.
 
     :param to_unit: str or Unit to convert values to, defaults to unitless
@@ -287,7 +310,7 @@ def converter(to_unit: typing.Optional[T_PARSE_UNIT] = None,
     """
     to_unit = to_unit or dimensionless
 
-    def f(x: T_PARSE_QUANTITY):
+    def f(x: TParseQuantity):
         if x is None:
             if not optional:
                 raise ParseError('Input to converter cannot be None')
@@ -299,7 +322,7 @@ def converter(to_unit: typing.Optional[T_PARSE_UNIT] = None,
     return f
 
 
-def return_converter(to_unit: T_PARSE_UNIT, allow_none: bool = False):
+def return_converter(to_unit: TParseUnit, allow_none: bool = False):
     """ Decorator to convert returned result to a Quantity.
 
     :param to_unit:
