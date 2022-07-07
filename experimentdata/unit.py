@@ -139,7 +139,7 @@ def format_custom(unit, registry, **options):
         single_denominator=False,
         product_fmt=" ",
         division_fmt="/",
-        power_fmt="{}**{}",
+        power_fmt="{}^{}",
         parentheses_fmt=r"({})",
         **options,
     )
