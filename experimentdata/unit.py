@@ -245,7 +245,7 @@ def parse(x: TParseQuantity, to_unit: typing.Optional[TParseUnit] = None,
                 # Don't use in-place change, can mess up values passed to some methods
                 x = x.to(to_unit)
             except pint.errors.DimensionalityError as ex:
-                raise ParseError(f"Unable to convert parsed quantity {x!s} to unit {to_unit}") from ex
+                raise ParseError(f"Unable to convert parsed quantity {x!s} to units {to_unit!s}") from ex
         else:
             x = Quantity(x.m_as(dimensionless), to_unit)
 

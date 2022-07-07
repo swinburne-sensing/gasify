@@ -1,239 +1,138 @@
 import unittest
-import typing
+from typing import Any, Iterable, Optional, Tuple
 
 from experimentdata import unit
 
-
-class _QuantityTestCase(unittest.TestCase):
-    __test__ = False
-
-    MIXED_TEST_RANGE = [
-        (1, 1.0),
-        (10, 10.0),
-        (100, 100.0),
-        (1000, 1000.0),
-        (0.001, 0.001),
-        (0.01, 0.01),
-        (0.1, 0.1),
-        (1.0, 1.0),
-        (10.0, 10.0),
-        (100.0, 100.0),
-        (1000.0, 1000.0)
-    ]
-
-    MIXED_TEST_RANGE_STR = [(str(x), y if y is not None else x) for x, y in MIXED_TEST_RANGE]
-
-    def assertQuantity(self, x: typing.Any, magnitude: typing.Union[int, float],
-                       expected_unit: typing.Optional[unit.Unit] = None,
-                       magnitude_unit: typing.Optional[unit.Unit] = None, precision: typing.Optional[int] = None):
-        expected_unit = expected_unit or unit.dimensionless
-        magnitude_unit = magnitude_unit or expected_unit
-
-        self.assertIsInstance(x, unit.Quantity, 'Not an instance of Quantity')
-        self.assertIs(x._REGISTRY, unit.registry, 'Quantity not part of registry')
-        self.assertEqual(expected_unit, x.units, 'Quantity does not match expected units')
-        self.assertTrue(x.is_compatible_with(magnitude_unit), 'Incompatible with magnitude check')
-        self.assertAlmostEqual(x.m_as(magnitude_unit), magnitude, precision, 'Magnitude does not match to expected '
-                                                                             'precision')
-
-    def assertRange(self, unit_iterable: typing.Iterable[typing.Tuple[typing.Any, unit.Unit]], value_iterable,
-                    precision: typing.Optional[int] = None, mag_round: typing.Optional[int] = None):
-        """
-
-        :param unit_iterable:
-        :param value_iterable:
-        :param precision:
-        :param mag_round:
-        :return:
-        """
-        for u_parse, u_expected in unit_iterable:
-            for v in value_iterable:
-                if len(v) == 2:
-                    v_parse, v_magnitude = v
-                    v_magnitude_unit = None
-                elif len(v) == 3:
-                    v_parse, v_magnitude, v_magnitude_unit = v
-                else:
-                    raise NotImplementedError('Incorrect test specification')
-
-                if u_parse is not None:
-                    with self.subTest(f"To unit {u_parse!r} from value {v_parse!r} "):
-                        self.assertQuantity(unit.parse(v_parse, u_parse, mag_round), v_magnitude, u_expected,
-                                            v_magnitude_unit, precision)
-                else:
-                    with self.subTest(f"From value {v_parse!r}"):
-                        self.assertQuantity(unit.parse(v_parse, mag_round=mag_round), v_magnitude, u_expected,
-                                            v_magnitude_unit, precision)
+from tests.util import QuantityTestCase
 
 
-class UnmodifiedTestCase(_QuantityTestCase):
-    def test_ohm(self):
-        self.assertQuantity(unit.Quantity(1, unit.registry.ohm), 1, unit.registry.ohm)
-        self.assertQuantity(unit.Quantity(1000, unit.registry.ohm), 1000, unit.registry.ohm)
-        self.assertQuantity(unit.Quantity(1000, unit.registry.ohm).to_compact(), 1, unit.registry.kiloohm)
-        self.assertQuantity(unit.Quantity(1000000, unit.registry.ohm).to_compact(), 1, unit.registry.megaohm)
-        self.assertQuantity(unit.Quantity(1000000, unit.registry.ohm).to(unit.registry.kiloohm), 1000,
-                            unit.registry.kiloohm)
-
-    def test_mixed_str_per(self):
-        q = unit.Quantity(1, unit.registry.ohm / unit.registry.millimeter)
-
-        self.assertQuantity(q, 1, unit.registry.ohm / unit.registry.millimeter)
-
-        self.assertEqual('1 kΩ/m', str(q))
-
-    def test_mixed_str_product(self):
-        q = unit.Quantity(1, unit.registry.ohm * unit.registry.meter)
-
-        self.assertQuantity(q, 1, unit.registry.ohm * unit.registry.meter)
-
-        self.assertEqual('1 m Ω', str(q))
-
-
-class ParseTestCase(_QuantityTestCase):
-    def test_simple(self):
-        self.assertRange(
-            [
-                (None, unit.dimensionless),
-                ('K', unit.registry.kelvin),
-                ('kelvin', unit.registry.kelvin),
-                (unit.registry.kelvin, unit.registry.kelvin),
-                ('ohm * meter', unit.registry.ohm * unit.registry.meter),
-                ('Ω * m', unit.registry.ohm * unit.registry.meter),
-                ('Ω*m', unit.registry.ohm * unit.registry.meter),
-                ('Ω m', unit.registry.ohm * unit.registry.meter),
-                ('ohm / millimeter', unit.registry.ohm / unit.registry.millimeter),
-                ('Ω / mm', unit.registry.ohm / unit.registry.millimeter),
-                ('Ω/mm', unit.registry.ohm / unit.registry.millimeter),
-                (unit.registry.ohm * unit.registry.meter, unit.registry.ohm * unit.registry.meter)
-            ],
-            self.MIXED_TEST_RANGE
+class FunctionTestCase(QuantityTestCase):
+    def test_scale(self):
+        self.assertQuantity(
+            unit.Quantity(1000, unit.registry.ohm).to_compact(),
+            unit.Quantity(1, unit.registry.kiloohm)
         )
 
-    def test_simple_str(self):
-        self.assertRange(
-            [
-                (None, unit.dimensionless),
-                ('K', unit.registry.kelvin),
-                ('kelvin', unit.registry.kelvin),
-                (unit.registry.kelvin, unit.registry.kelvin)
-            ],
-            self.MIXED_TEST_RANGE_STR
+        self.assertQuantity(
+            unit.Quantity(1000000, unit.registry.ohm).to_compact(),
+            unit.Quantity(1, unit.registry.megaohm)
         )
 
-    def test_simple_unit_str(self):
-        self.assertRange(
-            [
-                (None, unit.registry.kelvin)
-            ],
-            [(f"{x} K", y) for x, y in self.MIXED_TEST_RANGE_STR]
+        self.assertQuantity(
+            unit.Quantity(1000000, unit.registry.ohm).to(unit.registry.kiloohm),
+            unit.Quantity(1000, unit.registry.kiloohm)
         )
 
-        self.assertRange(
-            [
-                (None, unit.registry.kelvin)
-            ],
-            [(f"{x}K", y) for x, y in self.MIXED_TEST_RANGE_STR]
-        )
+    def test_str_mixed_unit_per(self):
+        self.assertEqual('1 Ω/m', str(unit.Quantity(1, unit.registry.ohm / unit.registry.meter)))
+        self.assertEqual('1 kΩ/m', str(unit.Quantity(1, unit.registry.ohm / unit.registry.millimeter)))
+        self.assertEqual('1 kΩ/m', str(unit.Quantity(1, unit.registry.kiloohm / unit.registry.meter)))
 
-    def test_simple_expression(self):
-        self.assertRange(
-            [
-                (None, unit.dimensionless),
-                ('K', unit.registry.kelvin),
-                ('kelvin', unit.registry.kelvin),
-                (unit.registry.kelvin, unit.registry.kelvin)
-            ], [
-                ('1×10²', 100.0),
-                ('1×10³', 1000.0)
-            ]
-        )
-
-    def test_simple_quantity(self):
-        self.assertRange(
-            [
-                (None, unit.registry.kelvin),
-                (unit.registry.kelvin, unit.registry.kelvin)
-            ],
-            [(unit.Quantity(x, unit.registry.kelvin), y) for x, y in self.MIXED_TEST_RANGE]
-        )
-
-    def test_simple_round(self):
-        self.assertRange(
-            [
-                (unit.registry.kelvin, unit.registry.kelvin)
-            ], [
-                (1.0, 1.0),
-                (1.01, 1.0),
-                (1.049, 1.0),
-                (1.05, 1.1),
-                (1.99, 2.0)
-            ], mag_round=1
-        )
-
-        self.assertRange(
-            [
-                (unit.registry.kelvin, unit.registry.kelvin)
-            ], [
-                (1.00, 1.0),
-                (1.001, 1.0),
-                (1.0049, 1.0),
-                (1.0051, 1.01),
-                (1.999, 2.0)
-            ], mag_round=2
-        )
-
-        self.assertRange(
-            [
-                (unit.registry.kelvin, unit.registry.kelvin)
-            ], [
-                (1.0001, 1.0),
-                (1.001, 1.001),
-                (1.0049, 1.005),
-                (1.0051, 1.005),
-                (1.9999, 2.0)
-            ], mag_round=3
-        )
+    def test_str_mixed_unit_product(self):
+        self.assertEqual('1 m Ω', str(unit.Quantity(1, unit.registry.ohm * unit.registry.meter)))
+        self.assertEqual('1 kΩ m', str(unit.Quantity(1, unit.registry.kiloohm * unit.registry.meter)))
+        self.assertEqual('1 m mΩ', str(unit.Quantity(1, unit.registry.ohm * unit.registry.millimeter)))
 
 
-class ParseDimensionlessTestCase(_QuantityTestCase):
-    def test_percent(self):
-        self.assertRange(
-            [
-                ('%', unit.registry.percent),
-                ('percent', unit.registry.percent),
-                (unit.registry.percent, unit.registry.percent),
-            ],
-            [(x, y / 100.0, unit.dimensionless) for x, y in self.MIXED_TEST_RANGE]
-        )
+class ParseTestCase(QuantityTestCase):
+    def _testParseList(self, test_list: Iterable[Tuple[unit.TParseQuantity, Optional[unit.TParseUnit], unit.Quantity,
+                                                       Optional[int]]], mag_round: Optional[int] = None):
+        for test_in, test_unit, expected_qty, places in test_list:
+            with self.subTest(f"Input: {test_in!r}, Unit: {test_unit or 'no unit'} = {expected_qty!s} "
+                              f"(places: {places}, round: {mag_round})"):
+                self.assertQuantity(unit.parse(test_in, test_unit, mag_round), expected_qty, places)
 
-    def test_ppm(self):
-        self.assertRange(
-            [
-                ('ppm', unit.registry.ppm),
-                ('ppm', unit.registry.ppm)
-            ],
-            [(x, y / 1000000.0, unit.dimensionless) for x, y in self.MIXED_TEST_RANGE]
-        )
+    def test_parse_unit(self):
+        self.assertEqual(unit.registry.degK, unit.parse_unit('K'))
+        self.assertEqual(unit.registry.degK, unit.parse_unit('kelvin'))
+        self.assertEqual(unit.registry.degK, unit.parse_unit(unit.registry.kelvin))
 
-    def test_ppb(self):
-        self.assertRange(
-            [
-                ('ppb', unit.registry.ppb),
-                (unit.registry.ppb, unit.registry.ppb)
-            ],
-            [(x, y / 1000000000.0, unit.dimensionless) for x, y in self.MIXED_TEST_RANGE]
-        )
+        self.assertEqual(unit.registry.degC, unit.parse_unit('degC'))
+        self.assertEqual(unit.registry.degC, unit.parse_unit('°C'))
 
+        self.assertEqual(unit.registry.meter, unit.parse_unit('m'))
+        self.assertEqual(unit.registry.millimeter, unit.parse_unit('mm'))
+        self.assertEqual(unit.registry.kilometer, unit.parse_unit('km'))
 
-class ParseConvertTestCase(_QuantityTestCase):
-    def test_convert(self):
-        self.assertRange(
-            [
-                (unit.registry.millimeter, unit.registry.millimeter)
-            ],
-            [(unit.Quantity(x, unit.registry.meter), 1000 * y) for x, y in self.MIXED_TEST_RANGE]
-        )
+    def test_parse_dimensionless(self):
+        self._testParseList([
+            ('0.001', None, unit.Quantity(0.0, unit.dimensionless), None),
+            (0.001, None, unit.Quantity(0.0, unit.dimensionless), None),
+            (unit.Quantity(0.001, unit.dimensionless), None, unit.Quantity(0.0, unit.dimensionless), None),
+
+            ('0.5001', None, unit.Quantity(1.0, unit.dimensionless), None),
+            (0.5001, None, unit.Quantity(1.0, unit.dimensionless), None),
+            (unit.Quantity(0.5001, unit.dimensionless), None, unit.Quantity(1.0, unit.dimensionless), None),
+
+            ('1.499', None, unit.Quantity(1.0, unit.dimensionless), None),
+            (1.499, None, unit.Quantity(1.0, unit.dimensionless), None),
+            (unit.Quantity(1.49, unit.dimensionless), None, unit.Quantity(1.0, unit.dimensionless), None)
+        ], mag_round=0)
+
+        self._testParseList([
+            ('0.0001', None, unit.Quantity(0.0, unit.dimensionless), None),
+            (0.0001, None, unit.Quantity(0.0, unit.dimensionless), None),
+            (unit.Quantity(0.0001, unit.dimensionless), None, unit.Quantity(0.0, unit.dimensionless), None),
+
+            ('0.0005001', None, unit.Quantity(0.001, unit.dimensionless), None),
+            (0.0005001, None, unit.Quantity(0.001, unit.dimensionless), None),
+            (unit.Quantity(0.0005001, unit.dimensionless), None, unit.Quantity(0.001, unit.dimensionless), None),
+
+            ('1.4999', None, unit.Quantity(1.5, unit.dimensionless), None),
+            (1.4999, None, unit.Quantity(1.5, unit.dimensionless), None),
+            (unit.Quantity(1.4999, unit.dimensionless), None, unit.Quantity(1.5, unit.dimensionless), None)
+        ], mag_round=3)
+
+    def test_parse_round(self):
+        self._testParseList([
+            ('0.001', None, unit.Quantity(0.001, unit.dimensionless), None),
+            (0.001, None, unit.Quantity(0.001, unit.dimensionless), None),
+
+            ('1', None, unit.Quantity(1.0, unit.dimensionless), None),
+            ('1.0', None, unit.Quantity(1.0, unit.dimensionless), None),
+            (1, None, unit.Quantity(1.0, unit.dimensionless), None),
+            (1.0, None, unit.Quantity(1.0, unit.dimensionless), None),
+
+            ('1000', None, unit.Quantity(1000.0, unit.dimensionless), None),
+            ('1000.0', None, unit.Quantity(1000.0, unit.dimensionless), None),
+            (1000, None, unit.Quantity(1000.0, unit.dimensionless), None),
+            (1000.0, None, unit.Quantity(1000.0, unit.dimensionless), None)
+        ])
+
+    def test_parse_provide_unit(self):
+        self._testParseList([
+            ('0.001', unit.registry.degC, unit.Quantity(0.001, unit.registry.degC), None),
+            (0.001, unit.registry.degC, unit.Quantity(0.001, unit.registry.degC), None),
+
+            ('1', unit.registry.degC, unit.Quantity(1.0, unit.registry.degC), None),
+            ('1.0', unit.registry.degC, unit.Quantity(1.0, unit.registry.degC), None),
+            (1, unit.registry.degC, unit.Quantity(1.0, unit.registry.degC), None),
+            (1.0, unit.registry.degC, unit.Quantity(1.0, unit.registry.degC), None),
+
+            ('1000', unit.registry.degC, unit.Quantity(1000.0, unit.registry.degC), None),
+            ('1000.0', unit.registry.degC, unit.Quantity(1000.0, unit.registry.degC), None),
+            (1000, unit.registry.degC, unit.Quantity(1000.0, unit.registry.degC), None),
+            (1000.0, unit.registry.degC, unit.Quantity(1000.0, unit.registry.degC), None),
+
+            ('1.0°C', None, unit.Quantity(1.0, unit.registry.degC), None),
+            ('1.0°C', unit.registry.degC, unit.Quantity(1.0, unit.registry.degC), None),
+
+            (unit.Quantity(1.0, unit.registry.degC), None, unit.Quantity(1.0, unit.registry.degC), None),
+            (unit.Quantity(1.0, unit.registry.degC), unit.registry.degC, unit.Quantity(1.0, unit.registry.degC), None)
+        ])
+
+    def test_parse_mixed_scale(self):
+        self._testParseList([
+            ('1m', unit.registry.millimeter, unit.Quantity(1000.0, unit.registry.millimeter), None),
+            (unit.Quantity(1.0, unit.registry.meter), unit.registry.millimeter,
+             unit.Quantity(1000.0, unit.registry.millimeter), None)
+        ])
+
+    def test_parse_mixed_unit(self):
+        self._testParseList([
+            ('1 Ω m', None, unit.Quantity(1.0, unit.registry.ohm * unit.registry.meter), None),
+            ('1 Ω/m', None, unit.Quantity(1.0, unit.registry.ohm / unit.registry.meter), None)
+        ])
 
 
 class PrintingTestCase(unittest.TestCase):
@@ -296,22 +195,6 @@ class PrintingTestCase(unittest.TestCase):
             (unit.Quantity(10, unit.registry.percent), '10%'),
             (unit.Quantity(100, unit.registry.percent), '100%')
         ])
-
-        self.assertEqual(str(unit.Quantity(1, unit.registry.ppb)), '1 ppb')
-        self.assertEqual(str(unit.Quantity(10, unit.registry.ppb)), '10 ppb')
-        self.assertEqual(str(unit.Quantity(100, unit.registry.ppb)), '100 ppb')
-        self.assertEqual('1 ppm', str(unit.Quantity(1000, unit.registry.ppb)))
-
-        self.assertEqual(str(unit.Quantity(1, unit.registry.ppm)), '1 ppm')
-        self.assertEqual(str(unit.Quantity(10, unit.registry.ppm)), '10 ppm')
-        self.assertEqual(str(unit.Quantity(100, unit.registry.ppm)), '100 ppm')
-        self.assertEqual(str(unit.Quantity(1000, unit.registry.ppm)), '0.1%')
-        self.assertEqual(str(unit.Quantity(10000, unit.registry.ppm)), '1%')
-
-        self.assertEqual(str(unit.Quantity(1, unit.registry.percent)), '1%')
-        self.assertEqual(str(unit.Quantity(10, unit.registry.percent)), '10%')
-        self.assertEqual(str(unit.Quantity(100, unit.registry.percent)), '100%')
-        self.assertEqual(str(unit.Quantity(1000, unit.registry.percent)), '1000%')
 
 
 if __name__ == '__main__':
