@@ -14,20 +14,22 @@ except ImportError:
 
 
 __all__ = [
-    'ParseError',
-    'registry',
-    'Quantity',
-    'Unit',
+    'converter',
     'dimensionless',
     'is_quantity',
     'is_unit',
     'parse',
-    'parse_unit',
-    'parse_timedelta',
     'parse_magnitude',
+    'parse_timedelta',
+    'parse_unit',
+    'ParseError',
+    'Quantity',
+    'registry',
+    'return_converter',
     'TParseQuantity',
+    'TParseTimeDelta',
     'TParseUnit',
-    'TParseTimeDelta'
+    'Unit'
 ]
 
 
