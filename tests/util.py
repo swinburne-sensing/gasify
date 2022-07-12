@@ -5,8 +5,6 @@ from experimentdata.unit import Quantity, Unit
 
 
 class QuantityTestCase(TestCase):
-    __test__ = False
-
     def assertQuantity(self, x: Any, expected: Quantity, places: Optional[int] = None,
                        magnitude_unit: Optional[Unit] = None):
         self.assertIsInstance(x, Quantity, 'Not an instance of Quantity')
