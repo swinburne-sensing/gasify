@@ -46,6 +46,7 @@ class ParseTestCase(QuantityTestCase):
         self.assertEqual(unit.registry.degK, unit.parse_unit('K'))
         self.assertEqual(unit.registry.degK, unit.parse_unit('kelvin'))
         self.assertEqual(unit.registry.degK, unit.parse_unit(unit.registry.kelvin))
+        self.assertEqual(unit.registry.degK, unit.parse_unit(unit.Quantity(1, unit.registry.kelvin)))
 
         self.assertEqual(unit.registry.degC, unit.parse_unit('degC'))
         self.assertEqual(unit.registry.degC, unit.parse_unit('°C'))
@@ -134,6 +135,35 @@ class ParseTestCase(QuantityTestCase):
             ('1 Ω/m', None, unit.Quantity(1.0, unit.registry.ohm / unit.registry.meter), None)
         ])
 
+    def test_parse_invalid(self):
+        with self.assertRaises(unit.ParseError):
+            unit.parse(None)
+
+        with self.assertRaises(unit.ParseError):
+            unit.parse([])
+
+        with self.assertRaises(unit.ParseError):
+            unit.parse({})
+
+        with self.assertRaises(unit.ParseError):
+            unit.parse((1, 2,))
+
+    def test_parse_invalid_conversion(self):
+        with self.assertRaises(unit.ParseError):
+            unit.parse('1 degC', unit.registry.volt)
+
+    def test_parse_unit_invalid(self):
+        with self.assertRaises(unit.ParseError):
+            unit.parse_unit(6)
+
+        with self.assertRaises(unit.ParseError):
+            unit.parse_unit('potato')
+
+    def test_parse_magnitude(self):
+        self.assertEqual(1.0, unit.parse_magnitude(1.0))
+        self.assertEqual(1000.0, unit.parse_magnitude('1 V', unit.registry.mV))
+        self.assertEqual(1000.0, unit.parse_magnitude(1, unit.registry.mV, unit.registry.V))
+
 
 class PrintingTestCase(unittest.TestCase):
     def assertStr(self, test_set):
@@ -195,6 +225,10 @@ class PrintingTestCase(unittest.TestCase):
             (unit.Quantity(10, unit.registry.percent), '10%'),
             (unit.Quantity(100, unit.registry.percent), '100%')
         ])
+
+
+class TimeDeltaTestCase(unittest.TestCase):
+    pass
 
 
 if __name__ == '__main__':
