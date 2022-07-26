@@ -14,7 +14,7 @@ WATER_TEMPERATURE_BOIL = Quantity(100, registry.degC)
 WATER_TEMPERATURE_CRITICAL = Quantity(647.096, registry.degK)
 
 unit_absolute = registry.g / pow(registry.meter, 3)
-humidity_unit_relative = dimensionless
+unit_relative = registry.percent
 
 TWaterVPCallable = Callable[[TParseQuantity], Quantity]
 
@@ -187,7 +187,7 @@ def absolute_to_relative(absolute_humidity: TParseQuantity, temperature: TParseQ
     return Quantity(
         WATER_GAS_CONSTANT.magnitude * temperature.m_as(registry.degK) * absolute_humidity.m_as(unit_absolute) /
         water_vp_method(temperature).m_as(registry.Pa),
-        humidity_unit_relative
+        unit_relative
     )
 
 
@@ -198,7 +198,7 @@ def relative_to_absolute(relative_humidity: TParseQuantity, temperature: TParseQ
     water_vp_method = water_vp_method or water_vp_sat_wagner_pruss
 
     return Quantity(
-        relative_humidity.m_as(humidity_unit_relative) * water_vp_method(temperature).m_as(registry.Pa) / (
+        relative_humidity.m_as(unit_relative) * water_vp_method(temperature).m_as(registry.Pa) / (
                     WATER_GAS_CONSTANT.magnitude * temperature.m_as(registry.degK)),
         unit_absolute
     )
