@@ -1,6 +1,6 @@
 import math
 import warnings
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, Optional
 
 from experimentdata.unit import Quantity, registry, dimensionless, parse, TParseQuantity
 
@@ -180,6 +180,13 @@ def water_vp_sat_buck(temperature: TParseQuantity) -> Quantity:
 
 def absolute_to_relative(absolute_humidity: TParseQuantity, temperature: TParseQuantity,
                          water_vp_method: Optional[TWaterVPCallable] = None) -> Quantity:
+    """ Convert absolute water vapour concentration (g/m^3) to relative humidity (%) at a given temperature.
+
+    :param absolute_humidity: absolute humidity concentration quantity
+    :param temperature: gas temperature
+    :param water_vp_method: method for water vapour saturation pressure calculation, defaults to Wagner-Pruss
+    :return: relative humidity quantity
+    """
     absolute_humidity = parse(absolute_humidity, unit_absolute)
     temperature = parse(temperature, registry.degC)
     water_vp_method = water_vp_method or water_vp_sat_wagner_pruss
@@ -193,6 +200,13 @@ def absolute_to_relative(absolute_humidity: TParseQuantity, temperature: TParseQ
 
 def relative_to_absolute(relative_humidity: TParseQuantity, temperature: TParseQuantity,
                          water_vp_method: Optional[TWaterVPCallable] = None) -> Quantity:
+    """ Convert relative humidity (%) to an absolute water vapour concentration (g/m^3) at a given temperature.
+
+    :param relative_humidity: relative humidity quantity
+    :param temperature: gas temperature
+    :param water_vp_method: method for water vapour saturation pressure calculation, defaults to Wagner-Pruss
+    :return: absolute humidity concentration quantity
+    """
     relative_humidity = parse(relative_humidity, dimensionless)
     temperature = parse(temperature, registry.degC)
     water_vp_method = water_vp_method or water_vp_sat_wagner_pruss
