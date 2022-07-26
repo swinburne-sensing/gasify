@@ -1,4 +1,4 @@
-attrs~=21.4
-pint~=0.19
-uncertainties~=3.1.6
+pint~=0.18; python_version < '3.8'
+pint~=0.19; python_version >= '3.8'
+
 git+https://github.com/swinburne-sensing/experimentutil.git#egg=experimentutil
