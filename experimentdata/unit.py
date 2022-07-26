@@ -4,7 +4,9 @@ import functools
 import typing
 from datetime import timedelta
 
+# noinspection PyPackageRequirements
 import pint
+# noinspection PyPackageRequirements
 import pint.formatting
 
 try:
@@ -22,7 +24,10 @@ __all__ = [
     'parse_magnitude',
     'parse_timedelta',
     'parse_unit',
+    'UnitError',
+    'IncompatibleUnits',
     'ParseError',
+    'UnknownUnit',
     'Quantity',
     'registry',
     'return_converter',
@@ -33,7 +38,19 @@ __all__ = [
 ]
 
 
-class ParseError(Exception):
+class UnitError(Exception):
+    pass
+
+
+class IncompatibleUnits(UnitError):
+    pass
+
+
+class ParseError(UnitError):
+    pass
+
+
+class UnknownUnit(UnitError):
     pass
 
 
@@ -133,6 +150,7 @@ dimensionless = registry.dimensionless
 
 
 # Change default printing format
+# noinspection PyShadowingNames,PyUnusedLocal
 @pint.register_unit_format('edata')
 def format_custom(unit, registry, **options):
     unit_str = pint.formatter(
@@ -163,6 +181,7 @@ Unit = registry.Unit
 
 # Setup pint arrays (experimental)
 if pint_pandas is not None:
+    # noinspection PyUnresolvedReferences
     pint_pandas.PintType.ureg = registry
 
 
@@ -210,7 +229,7 @@ def parse_unit(x: TParseUnit) -> Unit:
     if hasattr(registry, x):
         return getattr(registry, x)
 
-    raise ParseError(f"Unknown unit \"{x}\"")
+    raise UnknownUnit(f"Unknown unit \"{x}\"")
 
 
 def parse(x: TParseQuantity, to_unit: typing.Optional[TParseUnit] = None,
@@ -247,7 +266,7 @@ def parse(x: TParseQuantity, to_unit: typing.Optional[TParseUnit] = None,
                 # Don't use in-place change, can mess up values passed to some methods
                 x = x.to(to_unit)
             except pint.errors.DimensionalityError as ex:
-                raise ParseError(f"Unable to convert parsed quantity {x!s} to units {to_unit!s}") from ex
+                raise IncompatibleUnits(f"Unable to convert parsed quantity {x!s} to units {to_unit!s}") from ex
         else:
             x = Quantity(x.m_as(dimensionless), to_unit)
 
