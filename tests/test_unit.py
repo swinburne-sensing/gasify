@@ -149,14 +149,14 @@ class ParseTestCase(QuantityTestCase):
             unit.parse((1, 2,))
 
     def test_parse_invalid_conversion(self):
-        with self.assertRaises(unit.ParseError):
+        with self.assertRaises(unit.IncompatibleUnits):
             unit.parse('1 degC', unit.registry.volt)
 
     def test_parse_unit_invalid(self):
         with self.assertRaises(unit.ParseError):
             unit.parse_unit(6)
 
-        with self.assertRaises(unit.ParseError):
+        with self.assertRaises(unit.UnknownUnit):
             unit.parse_unit('potato')
 
     def test_parse_magnitude(self):
