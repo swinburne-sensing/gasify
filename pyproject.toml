@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "gasify"
+version = "1.2.0"
+description = "A module for handling data from experiments, primarily focused upon gas measurement"
+authors = ["Chris Harrison <629204+ravngr@users.noreply.github.com>"]
+license = "GPL-3.0-only"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+Pint = [
+    { version = "^0.19.2", markers = "python_version >= '3.8'" },
+    { version = "0.18", markers = "python_version < '3.8'" }
+]
+plenary = "^1.3.3"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^5.0.4"
+pre-commit = "^2.20.0"
+pytest = "^7.1.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
