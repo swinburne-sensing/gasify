@@ -1,6 +1,6 @@
 import unittest
 
-from experimentdata import humidity, unit
+from gasify import humidity, unit
 
 from tests.util import QuantityTestCase
 

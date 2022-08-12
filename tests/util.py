@@ -1,7 +1,7 @@
 from typing import Any, Optional
 from unittest import TestCase
 
-from experimentdata.unit import Quantity, Unit
+from gasify.unit import Quantity, Unit
 
 
 class QuantityTestCase(TestCase):

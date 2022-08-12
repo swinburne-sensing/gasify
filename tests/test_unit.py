@@ -1,7 +1,7 @@
 import unittest
-from typing import Any, Iterable, Optional, Tuple
+from typing import Iterable, Optional, Tuple
 
-from experimentdata import unit
+from gasify import unit
 
 from tests.util import QuantityTestCase
 
@@ -135,6 +135,7 @@ class ParseTestCase(QuantityTestCase):
             ('1 Ω/m', None, unit.Quantity(1.0, unit.registry.ohm / unit.registry.meter), None)
         ])
 
+    # noinspection PyTypeChecker
     def test_parse_invalid(self):
         with self.assertRaises(unit.ParseError):
             unit.parse(None)
@@ -153,6 +154,7 @@ class ParseTestCase(QuantityTestCase):
             unit.parse('1 degC', unit.registry.volt)
 
     def test_parse_unit_invalid(self):
+        # noinspection PyTypeChecker
         with self.assertRaises(unit.ParseError):
             unit.parse_unit(6)
 

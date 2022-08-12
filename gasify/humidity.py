@@ -2,7 +2,7 @@ import math
 import warnings
 from typing import Callable, Optional
 
-from experimentdata.unit import Quantity, registry, dimensionless, parse, TParseQuantity
+from gasify.unit import Quantity, registry, dimensionless, parse, TParseQuantity
 
 
 WATER_GAS_CONSTANT = Quantity(0.4615, registry.J / (registry.gram * registry.degK))

@@ -1,6 +1,10 @@
-# experimentdata
+# gasify
+
+![license](https://img.shields.io/github/license/swinburne-sensing/gasify) ![python version](https://img.shields.io/pypi/pyversions/gasify) ![testing](https://github.com/swinburne-sensing/gasify/actions/workflows/python.yml/badge.svg) ![issues](https://img.shields.io/github/issues/swinburne-sensing/gasify)
 
 A library for handling data from experiments, primarily focused upon gas sensing results. Contains methods for calculation of humidity, gas concentrations, gas mixtures, gas correction factors, and handling of various engineering and scientific units (extended from [pint](https://pint.readthedocs.io/en/stable/)).
+
+Formally known as `experimentutil` (un-released).
 
 ## Acknowledgments
 
