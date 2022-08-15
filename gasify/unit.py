@@ -142,8 +142,39 @@ class Unit(registry.Unit):
         return super().__format__(spec)
 
 
+class Measurement(registry.Measurement):
+    def __format__(self, format_spec: str) -> str:
+        format_spec = format_spec or self.default_format
+
+        mspec, uspec = pint.formatting.split_format(
+            format_spec, self.default_format, self._REGISTRY.separate_format_defaults
+        )
+
+        if '#' in mspec:
+            mspec = mspec.replace('#', '')
+            obj = self.to_compact()
+        else:
+            obj = self
+
+        if mspec == 'g':
+            mstr = format(obj.magnitude, '.6g').replace('+/-', '±')
+
+            if '±' in mstr:
+                mag, sep, error = mstr.partition('±')
+            else:
+                mag = mstr
+                sep = error = ''
+
+            mstr = mag.rstrip('0').rstrip('.') + sep + error.rstrip('0').rstrip('.')
+        else:
+            mstr = format(obj.magnitude, mspec).replace('+/-', '±')
+
+        return mstr + ' ' + format(obj.units, uspec)
+
+
 registry.Quantity = Quantity
 registry.Unit = Unit
+registry.Measurement = Measurement
 
 # Shortcuts for dimensionless quantities (must occur after subclassing of Unit)
 dimensionless = registry.dimensionless
@@ -151,7 +182,7 @@ dimensionless = registry.dimensionless
 
 # Change default printing format
 # noinspection PyShadowingNames,PyUnusedLocal
-@pint.register_unit_format('edata')
+@pint.register_unit_format('gasify')
 def format_custom(unit, registry, **options):
     unit_str = pint.formatter(
         unit.items(),
@@ -167,7 +198,7 @@ def format_custom(unit, registry, **options):
     return unit_str
 
 
-registry.default_format = 'g~#edata'
+registry.default_format = 'g~#gasify'
 
 
 # Handle pickle/unpickling by overwriting the built-in unit registry

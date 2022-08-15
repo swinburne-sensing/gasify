@@ -228,6 +228,11 @@ class PrintingTestCase(unittest.TestCase):
             (unit.Quantity(100, unit.registry.percent), '100%')
         ])
 
+    def test_print_plus_minus(self):
+        self.assertEqual(str(unit.Quantity(1, unit.registry.V).plus_minus(0.1)), '1±0.1 V')
+        self.assertEqual(str(unit.Quantity(1.001, unit.registry.V).plus_minus(0.1)), '1.001±0.1 V')
+        self.assertEqual(str(unit.Quantity(1.001, unit.registry.V).plus_minus(0.1)), '1.001±0.1 V')
+
 
 class TimeDeltaTestCase(unittest.TestCase):
     pass
