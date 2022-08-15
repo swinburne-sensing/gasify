@@ -194,8 +194,8 @@ def absolute_to_relative(absolute_humidity: TParseQuantity, temperature: TParseQ
     return Quantity(
         WATER_GAS_CONSTANT.magnitude * temperature.m_as(registry.degK) * absolute_humidity.m_as(unit_absolute) /
         water_vp_method(temperature).m_as(registry.Pa),
-        unit_relative
-    )
+        dimensionless
+    ).to(unit_relative)
 
 
 def relative_to_absolute(relative_humidity: TParseQuantity, temperature: TParseQuantity,
@@ -212,7 +212,7 @@ def relative_to_absolute(relative_humidity: TParseQuantity, temperature: TParseQ
     water_vp_method = water_vp_method or water_vp_sat_wagner_pruss
 
     return Quantity(
-        relative_humidity.m_as(unit_relative) * water_vp_method(temperature).m_as(registry.Pa) / (
+        relative_humidity.m_as(dimensionless) * water_vp_method(temperature).m_as(registry.Pa) / (
                     WATER_GAS_CONSTANT.magnitude * temperature.m_as(registry.degK)),
         unit_absolute
     )

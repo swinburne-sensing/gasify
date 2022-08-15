@@ -154,30 +154,50 @@ class WaterVaporPressureTestCase(QuantityTestCase):
 
 class TestDataHumidity(QuantityTestCase):
     def test_rel_to_abs(self):
-        rel_humid = unit.parse('100%')
-
         abs_humid = unit.parse('30.359 g/m^3')
-        calc_abs_humid = humidity.relative_to_absolute(rel_humid, unit.Quantity(30, unit.registry.degC))
 
-        self.assertQuantity(
-            abs_humid,
-            calc_abs_humid,
-            2,
-            humidity.unit_absolute
-        )
+        with self.subTest('from float'):
+            calc_abs_humid = humidity.relative_to_absolute(1.0, 30.0)
+
+            self.assertQuantity(
+                abs_humid,
+                calc_abs_humid,
+                2,
+                humidity.unit_absolute
+            )
+
+        with self.subTest('from Quantity'):
+            calc_abs_humid = humidity.relative_to_absolute(unit.parse('100%'), unit.parse('30°C'))
+
+            self.assertQuantity(
+                abs_humid,
+                calc_abs_humid,
+                2,
+                humidity.unit_absolute
+            )
 
     def test_abs_to_rel(self):
-        abs_humid = unit.parse('30.359 g/m^3')
-
         rel_humid = unit.parse('100%')
-        calc_rel_humid = humidity.absolute_to_relative(abs_humid, unit.Quantity(30, unit.registry.degC))
 
-        self.assertQuantity(
-            rel_humid,
-            calc_rel_humid,
-            2,
-            unit.dimensionless
-        )
+        with self.subTest('from float'):
+            calc_rel_humid = humidity.absolute_to_relative(30.359, 30)
+
+            self.assertQuantity(
+                rel_humid,
+                calc_rel_humid,
+                2,
+                unit.dimensionless
+            )
+
+        with self.subTest('from Quantity'):
+            calc_rel_humid = humidity.absolute_to_relative(unit.parse('30.359 g/m^3'), unit.parse('30°C'))
+
+            self.assertQuantity(
+                rel_humid,
+                calc_rel_humid,
+                2,
+                unit.dimensionless
+            )
 
 
 if __name__ == '__main__':
