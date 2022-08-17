@@ -46,11 +46,11 @@ class IncompatibleUnits(UnitError):
     pass
 
 
-class ParseError(UnitError):
+class UnknownUnit(UnitError):
     pass
 
 
-class UnknownUnit(UnitError):
+class ParseError(UnitError, ValueError):
     pass
 
 
@@ -357,7 +357,7 @@ def parse_timedelta(x: TParseTimeDelta) -> timedelta:
 
 
 def converter(to_unit: typing.Optional[TParseUnit] = None,
-              optional: bool = False) -> typing.Callable[[TParseQuantity], Quantity]:
+              optional: bool = False) -> typing.Callable[[typing.Optional[TParseQuantity]], Quantity]:
     """ Create wrapper for parse decorator with a pre-defined unit. Useful with the attrs library.
 
     :param to_unit: str or Unit to convert values to, defaults to unitless
@@ -366,7 +366,7 @@ def converter(to_unit: typing.Optional[TParseUnit] = None,
     """
     to_unit = to_unit or dimensionless
 
-    def f(x: TParseQuantity):
+    def f(x: typing.Optional[TParseQuantity]):
         if x is None:
             if not optional:
                 raise ParseError('Input to converter cannot be None')
@@ -399,9 +399,11 @@ def return_converter(to_unit: TParseUnit, allow_none: bool = False):
                 return None
 
             if not is_quantity(result):
-                raise ValueError(f"Decorated method returned {type(result)}, expected Quantity")
+                result = parse(result, to_unit)
+            else:
+                result.ito(to_unit)
 
-            return result.to(to_unit)
+            return result
 
         return wrapper_result
 
