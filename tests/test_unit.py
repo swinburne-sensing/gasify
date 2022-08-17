@@ -1,4 +1,5 @@
 import unittest
+from datetime import timedelta
 from typing import Iterable, Optional, Tuple
 
 from gasify import unit
@@ -235,7 +236,65 @@ class PrintingTestCase(unittest.TestCase):
 
 
 class TimeDeltaTestCase(unittest.TestCase):
-    pass
+    def test_parse(self):
+        self.assertEqual(timedelta(seconds=1), unit.parse_timedelta('1s'))
+        self.assertEqual(timedelta(seconds=1), unit.parse_timedelta('1 s'))
+        self.assertEqual(timedelta(seconds=1), unit.parse_timedelta('1sec'))
+        self.assertEqual(timedelta(seconds=1), unit.parse_timedelta('1 sec'))
+
+        self.assertEqual(timedelta(minutes=1), unit.parse_timedelta('1min'))
+        self.assertEqual(timedelta(minutes=1), unit.parse_timedelta('1 min'))
+
+        self.assertEqual(timedelta(minutes=1, seconds=30), unit.parse_timedelta('90s'))
+        self.assertEqual(timedelta(minutes=1, seconds=30), unit.parse_timedelta('90 s'))
+        self.assertEqual(timedelta(minutes=1, seconds=30), unit.parse_timedelta('90sec'))
+        self.assertEqual(timedelta(minutes=1, seconds=30), unit.parse_timedelta('90 sec'))
+
+        self.assertEqual(timedelta(hours=1), unit.parse_timedelta('1hr'))
+        self.assertEqual(timedelta(hours=1), unit.parse_timedelta('1 hr'))
+
+
+class ConverterTestCase(QuantityTestCase):
+    def test_converter(self):
+        converter = unit.converter(unit.registry.ohm)
+        optional_converter = unit.converter(unit.registry.ohm, True)
+
+        self.assertQuantity(converter('1 ohm'), unit.Quantity(1, unit.registry.ohm))
+        self.assertQuantity(converter(1), unit.Quantity(1, unit.registry.ohm))
+        self.assertQuantity(converter(1.0), unit.Quantity(1, unit.registry.ohm))
+
+        with self.assertRaises(unit.ParseError):
+            converter(None)
+
+        self.assertQuantity(optional_converter('1 ohm'), unit.Quantity(1, unit.registry.ohm))
+        self.assertQuantity(optional_converter(1), unit.Quantity(1, unit.registry.ohm))
+        self.assertQuantity(optional_converter(1.0), unit.Quantity(1, unit.registry.ohm))
+        self.assertIsNone(optional_converter(None))
+
+    def test_return(self):
+        @unit.return_converter(unit.registry.ohm)
+        def test_method_a():
+            return 1
+
+        @unit.return_converter('ohm')
+        def test_method_b():
+            return 1
+
+        @unit.return_converter(unit.registry.ohm, True)
+        def test_method_c():
+            return None
+
+        @unit.return_converter(unit.registry.ohm)
+        def test_method_d():
+            return None
+
+        self.assertQuantity(test_method_a(), unit.Quantity(1, unit.registry.ohm))
+        self.assertQuantity(test_method_b(), unit.Quantity(1, unit.registry.ohm))
+
+        self.assertIsNone(test_method_c())
+
+        with self.assertRaises(ValueError):
+            test_method_d()
 
 
 if __name__ == '__main__':
