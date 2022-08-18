@@ -1,20 +1,20 @@
 import math
 import warnings
-from typing import Callable, Optional
+from typing import Callable, Optional, cast
 
-from gasify.unit import Quantity, registry, dimensionless, parse, TParseQuantity
+from gasify.unit import Quantity, Unit, registry, dimensionless, parse, TParseQuantity
 
 
-WATER_GAS_CONSTANT = Quantity(0.4615, registry.J / (registry.gram * registry.degK))
+WATER_GAS_CONSTANT: Quantity = Quantity(0.4615, registry.J / (registry.gram * registry.degK))
 
-WATER_PRESSURE_CRITICAL = Quantity(22.064, registry.MPa)
+WATER_PRESSURE_CRITICAL: Quantity = Quantity(22.064, registry.MPa)
 
-WATER_TEMPERATURE_FREEZE = Quantity(0, registry.degC)
-WATER_TEMPERATURE_BOIL = Quantity(100, registry.degC)
-WATER_TEMPERATURE_CRITICAL = Quantity(647.096, registry.degK)
+WATER_TEMPERATURE_FREEZE: Quantity = Quantity(0, registry.degC)
+WATER_TEMPERATURE_BOIL: Quantity = Quantity(100, registry.degC)
+WATER_TEMPERATURE_CRITICAL: Quantity = Quantity(647.096, registry.degK)
 
-unit_absolute = registry.g / pow(registry.meter, 3)
-unit_relative = registry.percent
+unit_absolute: Unit = registry.g / pow(registry.meter, 3)
+unit_relative: Unit = registry.percent
 
 TWaterVPCallable = Callable[[TParseQuantity], Quantity]
 
@@ -24,7 +24,7 @@ class TemperatureRangeWarning(UserWarning):
 
 
 def _wvps_vartheta(temperature: Quantity) -> Quantity:
-    return 1 - temperature / WATER_TEMPERATURE_CRITICAL
+    return cast(Quantity, 1 - temperature / WATER_TEMPERATURE_CRITICAL)
 
 
 def water_vp_sat_wagner_pruss(temperature: TParseQuantity) -> Quantity:
@@ -38,14 +38,14 @@ def water_vp_sat_wagner_pruss(temperature: TParseQuantity) -> Quantity:
     temperature = parse(temperature, registry.degC)
 
     # noinspection PyTypeChecker
-    return WATER_PRESSURE_CRITICAL * math.exp(WATER_TEMPERATURE_CRITICAL / temperature * (
+    return cast(Quantity, WATER_PRESSURE_CRITICAL * math.exp(WATER_TEMPERATURE_CRITICAL / temperature * (
         -7.85951783 * _wvps_vartheta(temperature) +
         1.84408259 * math.pow(_wvps_vartheta(temperature), 1.5) +
         -11.78649 * math.pow(_wvps_vartheta(temperature), 3) +
         22.6807411 * math.pow(_wvps_vartheta(temperature), 3.5) +
         -15.9618719 * math.pow(_wvps_vartheta(temperature), 4) +
         1.80122502 * math.pow(_wvps_vartheta(temperature), 7.5)
-    ))
+    )))
 
 
 _WATER_VP_SAT_SIMPLE_MIN = Quantity(0, registry.degC)
@@ -191,11 +191,11 @@ def absolute_to_relative(absolute_humidity: TParseQuantity, temperature: TParseQ
     temperature = parse(temperature, registry.degC)
     water_vp_method = water_vp_method or water_vp_sat_wagner_pruss
 
-    return Quantity(
+    return cast(Quantity, Quantity(
         WATER_GAS_CONSTANT.magnitude * temperature.m_as(registry.degK) * absolute_humidity.m_as(unit_absolute) /
         water_vp_method(temperature).m_as(registry.Pa),
         dimensionless
-    ).to(unit_relative)
+    ).to(unit_relative))
 
 
 def relative_to_absolute(relative_humidity: TParseQuantity, temperature: TParseQuantity,
