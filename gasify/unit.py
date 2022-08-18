@@ -351,9 +351,7 @@ def parse_timedelta(x: TParseTimeDelta) -> timedelta:
         # Assume seconds by default
         x_unit = Quantity(x_unit.m_as(dimensionless), registry.sec)
 
-    x_secs = x_unit.m_as(registry.sec)
-
-    return timedelta(seconds=x_secs)
+    return x_unit.to_timedelta()
 
 
 def converter(to_unit: typing.Optional[TParseUnit] = None,
