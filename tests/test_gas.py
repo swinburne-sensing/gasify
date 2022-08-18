@@ -373,6 +373,44 @@ class MixtureTestCase(unittest.TestCase):
             True
         )
 
+    def test_norm(self):
+        a = gas.Mixture(0.1 * gas.registry.oxygen, 0.1 * gas.registry.hydrogen)
+
+        self.assertMixture(
+            a.normalise(),
+            (
+                0.5 * gas.registry.hydrogen,
+                0.5 * gas.registry.oxygen
+            ),
+            1.0,
+            True
+        )
+
+        b = gas.Mixture(3.0 * gas.registry.oxygen, 1.0 * gas.registry.hydrogen)
+
+        self.assertMixture(
+            b.normalise(),
+            (
+                0.25 * gas.registry.hydrogen,
+                0.75 * gas.registry.oxygen
+            ),
+            1.0,
+            True
+        )
+
+        c = gas.Mixture(0.5 * gas.registry.oxygen, 1.0 * gas.registry.hydrogen, 2.5 * gas.registry.nitrogen)
+
+        self.assertMixture(
+            c.normalise(),
+            (
+                0.25 * gas.registry.hydrogen,
+                0.125 * gas.registry.oxygen,
+                0.625 * gas.registry.nitrogen
+            ),
+            1.0,
+            True
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -5,11 +5,15 @@ from collections import defaultdict
 from collections.abc import Iterable as abc_Iterable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, FrozenSet, Iterable, Iterator, Optional, Set, Tuple, Union
+from typing import Any, Dict, FrozenSet, Iterable, Iterator, Optional, Set, Tuple, Union, cast
 
 from plenary import storage
 
 from gasify.unit import TParseQuantity, Quantity, dimensionless, parse, registry as unit_registry
+
+
+_unit_specific_heat = unit_registry.cal / unit_registry.g
+_unit_density = unit_registry.g / unit_registry.L
 
 
 class _GasRegistryEntry(storage.RegistryEntry, metaclass=ABCMeta):
@@ -27,15 +31,12 @@ class _GasRegistryEntry(storage.RegistryEntry, metaclass=ABCMeta):
         pass
 
 
-class MolecularStructure(Enum):
-    """ Molecular structure gas constants.
-
-    Reference: MKS (https://www.mksinst.com/n/flow-measurement-control-frequently-asked-questions)
-    """
-    MONATOMIC = 1.03
-    DIATOMIC = 1
-    TRIATOMIC = 0.941
-    POLYATOMIC = 0.88
+# Molecular structure gas constants.
+# Reference: MKS (https://www.mksinst.com/n/flow-measurement-control-frequently-asked-questions)
+MONATOMIC = 1.03
+DIATOMIC = 1
+TRIATOMIC = 0.941
+POLYATOMIC = 0.88
 
 
 @dataclass(eq=False, frozen=True)
@@ -47,20 +48,12 @@ class Compound(_GasRegistryEntry):
     symbol: Optional[str] = field(default=None)
     alias: FrozenSet[str] = field(default_factory=frozenset, kw_only=True)
 
-    molecular_structure: Optional[MolecularStructure] = field(default=None, kw_only=True)
-    specific_heat: Union[None, TParseQuantity, Quantity] = field(default=None, kw_only=True)
-    density: Union[None, TParseQuantity, Quantity] = field(default=None, kw_only=True)
+    molecular_structure: Optional[float] = field(default=None, kw_only=True)
+    specific_heat: Optional[Quantity] = field(default=None, kw_only=True)
+    density: Optional[Quantity] = field(default=None, kw_only=True)
 
     _analyte: bool = field(default=True, kw_only=True)
     order: int = field(default=0, kw_only=True)
-
-    def __post_init__(self):
-        # Convert quantities
-        if self.specific_heat is not None:
-            object.__setattr__(self, 'specific_heat', parse(self.specific_heat, unit_registry.cal / unit_registry.g))
-
-        if self.density is not None:
-            object.__setattr__(self, 'density', parse(self.density, unit_registry.g / unit_registry.L))
 
     @property
     def analyte(self) -> bool:
@@ -72,8 +65,7 @@ class Compound(_GasRegistryEntry):
             # Unable to calculate GCF
             return None
 
-        return (0.3106 * self.molecular_structure.value /
-                (self.density * self.specific_heat)).magnitude
+        return cast(float, (0.3106 * self.molecular_structure / (self.density * self.specific_heat)).magnitude)
 
     @property
     def registry_key(self) -> Union[str, Iterable[str]]:
@@ -141,10 +133,10 @@ class Compound(_GasRegistryEntry):
 
 @dataclass(frozen=True)
 class CompoundConcentration:
-    concentration: Union[TParseQuantity, Quantity]
-    compound: Union[TParseQuantity, Compound]
+    concentration: Quantity
+    compound: Compound
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         object.__setattr__(self, 'concentration', parse(self.concentration).to_compact())
 
         if not self.concentration.is_compatible_with(dimensionless):
@@ -153,7 +145,7 @@ class CompoundConcentration:
         if self.concentration.m_as(dimensionless) < 0:
             raise ValueError('Gas concentration cannot be below zero')
 
-    def __add__(self, other) -> Mixture:
+    def __add__(self, other: Any) -> Mixture:
         if isinstance(other, abc_Iterable):
             return Mixture(self, *other)
         else:
@@ -183,51 +175,51 @@ class CompoundConcentration:
         elif isinstance(other, Compound):
             return self.compound == other
         elif isinstance(other, (int, float, str, Quantity)):
-            return self.concentration == parse(other)
+            return bool(self.concentration == parse(other))
 
         return object.__eq__(self, other)
 
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, self.__class__):
             if self.compound == other.compound:
-                return self.concentration < other.concentration
+                return bool(self.concentration < other.concentration)
             else:
                 return self.compound < other.compound
         elif isinstance(other, (int, float, str, Quantity)):
-            return self.concentration < parse(other)
+            return bool(self.concentration < parse(other))
 
         raise NotImplemented
 
-    def __le__(self, other):
+    def __le__(self, other: Any) -> bool:
         if isinstance(other, self.__class__):
             if self.compound == other.compound:
-                return self.concentration <= other.concentration
+                return bool(self.concentration <= other.concentration)
             else:
                 return self.compound <= other.compound
         elif isinstance(other, (int, float, str, Quantity)):
-            return self.concentration <= parse(other)
+            return bool(self.concentration <= parse(other))
 
         raise NotImplemented
 
-    def __gt__(self, other):
+    def __gt__(self, other: Any) -> bool:
         if isinstance(other, self.__class__):
             if self.compound == other.compound:
-                return self.concentration > other.concentration
+                return bool(self.concentration > other.concentration)
             else:
-                return self.compound > other.compound
+                return bool(self.compound > other.compound)
         elif isinstance(other, (int, float, str, Quantity)):
-            return self.concentration > parse(other)
+            return bool(self.concentration > parse(other))
 
         raise NotImplemented
 
-    def __ge__(self, other):
+    def __ge__(self, other: Any) -> bool:
         if isinstance(other, self.__class__):
             if self.compound == other.compound:
-                return self.concentration >= other.concentration
+                return bool(self.concentration >= other.concentration)
             else:
-                return self.compound >= other.compound
+                return bool(self.compound >= other.compound)
         elif isinstance(other, (int, float, str, Quantity)):
-            return self.concentration >= parse(other)
+            return bool(self.concentration >= parse(other))
 
         raise NotImplemented
 
@@ -242,12 +234,12 @@ class Mixture(_GasRegistryEntry):
     # Mixture name
     name: Optional[str] = field(default=None, kw_only=True)
 
-    def __init__(self, *content, name: Optional[str] = None):
+    def __init__(self, *content: CompoundConcentration, name: Optional[str] = None):
         # Combine parts by compound
-        parts_lut = defaultdict(lambda: Quantity(0, dimensionless))
+        parts_lut: Dict[Compound, float] = defaultdict(float)
 
         for part in content:
-            parts_lut[part.compound] += part.concentration
+            parts_lut[part.compound] += part.concentration.m_as(dimensionless)
 
         # Order components by concentration with non-analytes last
         object.__setattr__(
@@ -255,7 +247,10 @@ class Mixture(_GasRegistryEntry):
             'content',
             tuple(
                 sorted(
-                    [CompoundConcentration(concentration, compound) for compound, concentration in parts_lut.items()]
+                    [
+                        CompoundConcentration(Quantity(concentration, dimensionless), compound)
+                        for compound, concentration in parts_lut.items()
+                    ]
                 )
             )
         )
@@ -268,8 +263,7 @@ class Mixture(_GasRegistryEntry):
         else:
             return Mixture(*self, other)
 
-    def __radd__(self, other: Any) -> Mixture:
-        return self + other
+    __radd__ = __add__
 
     def __iter__(self) -> Iterator[CompoundConcentration]:
         return iter(self.content)
@@ -303,25 +297,27 @@ class Mixture(_GasRegistryEntry):
             raise ValueError(f"Cannot calculate GCF, missing one or more properties of components: "
                              f"{', '.join(error_list)}")
 
-        return (
-            0.3106
-            * sum(
-                (
-                    part.concentration * part.compound.molecular_structure.value
+        return cast(
+            float,
+            (
+                0.3106
+                * sum(
+                    part.concentration * part.compound.molecular_structure
                     for part in self.content
                 )
-            )
-            / sum(
-                (
+                / sum(
                     part.concentration * part.compound.density * part.compound.specific_heat
                     for part in self.content
                 )
-            )
-        ).magnitude
+            ).magnitude
+        )
 
     @property
     def total(self) -> Quantity:
-        return sum(part.concentration for part in self.content)
+        return Quantity(
+            sum(part.concentration.m_as(dimensionless) for part in self.content),
+            dimensionless
+        ).to_compact()
 
     @property
     def registry_key(self) -> Union[str, Iterable[str]]:
@@ -333,25 +329,30 @@ class Mixture(_GasRegistryEntry):
     def __str__(self) -> str:
         return ', '.join(map(str, self.content))
 
+    def normalise(self) -> Mixture:
+        total = self.total
+
+        return Mixture(*(part / total for part in self.content), name=self.name)
+
     @classmethod
     def auto_balance(cls, *content: CompoundConcentration, balance: Compound, name: Optional[str] = None) -> Mixture:
-        content = list(content)
+        content_list = list(content)
         balance_quantity = Quantity(1.0, dimensionless)
 
         for part in content:
             balance_quantity -= part.concentration
 
-        content.append(CompoundConcentration(balance_quantity, balance))
+        content_list.append(CompoundConcentration(balance_quantity, balance))
 
-        return Mixture(*content, name=name)
+        return Mixture(*content_list, name=name)
 
 
 nitrogen = Compound(
     'Nitrogen',
     symbol='N_2',
-    molecular_structure=MolecularStructure.DIATOMIC,
-    specific_heat=0.2485,
-    density=1.25,
+    molecular_structure=DIATOMIC,
+    specific_heat=Quantity(0.2485, _unit_specific_heat),
+    density=Quantity(1.25, _unit_density),
     _analyte=False,
     order=2
 )
@@ -360,16 +361,20 @@ nitrogen = Compound(
 oxygen = Compound(
     'Oxygen',
     symbol='O_2',
-    molecular_structure=MolecularStructure.DIATOMIC,
-    specific_heat=0.2193,
-    density=1.427,
+    molecular_structure=DIATOMIC,
+    specific_heat=Quantity(0.2193, _unit_specific_heat),
+    density=Quantity(1.427, _unit_density),
     _analyte=False,
     order=1
 )
 
 
-air = Mixture.auto_balance(CompoundConcentration(Quantity(21, unit_registry.percent), oxygen), balance=nitrogen,
-                           name='Air')
+# Based off instrument-grade air from BOC
+air = Mixture.auto_balance(
+    0.21 * oxygen,
+    balance=nitrogen,
+    name='Air'
+)
 
 
 class _GasRegistry(storage.Registry[_GasRegistryEntry]):
@@ -380,158 +385,158 @@ registry = _GasRegistry([
     Compound(
         'Acetone',
         symbol='(CH_3)_2CO',
-        molecular_structure=MolecularStructure.POLYATOMIC,
-        specific_heat=0.51,
-        density=0.21
+        molecular_structure=POLYATOMIC,
+        specific_heat=Quantity(0.51, _unit_specific_heat),
+        density=Quantity(0.21, _unit_density)
     ),
     Compound(
         'Ammonia',
         symbol='NH_3',
-        molecular_structure=MolecularStructure.POLYATOMIC,
-        specific_heat=0.492,
-        density=0.76
+        molecular_structure=POLYATOMIC,
+        specific_heat=Quantity(0.492, _unit_specific_heat),
+        density=Quantity(0.76, _unit_density)
     ),
     Compound(
         'Argon',
         symbol='Ar',
-        molecular_structure=MolecularStructure.MONATOMIC,
-        specific_heat=0.1244,
-        density=1.782,
+        molecular_structure=MONATOMIC,
+        specific_heat=Quantity(0.1244, _unit_specific_heat),
+        density=Quantity(1.782, _unit_density),
         _analyte=False,
         order=2
     ),
     Compound(
         'Arsine',
-        molecular_structure=MolecularStructure.POLYATOMIC,
-        specific_heat=0.1167,
-        density=3.478
+        molecular_structure=POLYATOMIC,
+        specific_heat=Quantity(0.1167, _unit_specific_heat),
+        density=Quantity(3.478, _unit_density)
     ),
     Compound(
         'Bromine',
         symbol='Br_2',
-        molecular_structure=MolecularStructure.DIATOMIC,
-        specific_heat=0.0539,
-        density=7.13
+        molecular_structure=DIATOMIC,
+        specific_heat=Quantity(0.0539, _unit_specific_heat),
+        density=Quantity(7.13, _unit_density)
     ),
     Compound(
         'Carbon-dioxide',
         symbol='CO_2',
-        molecular_structure=MolecularStructure.TRIATOMIC,
-        specific_heat=0.2016,
-        density=1.964
+        molecular_structure=TRIATOMIC,
+        specific_heat=Quantity(0.2016, _unit_specific_heat),
+        density=Quantity(1.964, _unit_density)
     ),
     Compound(
         'Carbon-monoxide',
         symbol='CO',
-        molecular_structure=MolecularStructure.DIATOMIC,
-        specific_heat=0.2488,
-        density=1.25
+        molecular_structure=DIATOMIC,
+        specific_heat=Quantity(0.2488, _unit_specific_heat),
+        density=Quantity(1.25, _unit_density)
     ),
     Compound(
         'Carbon-tetrachloride',
-        molecular_structure=MolecularStructure.POLYATOMIC,
-        specific_heat=0.1655,
-        density=6.86
+        molecular_structure=POLYATOMIC,
+        specific_heat=Quantity(0.1655, _unit_specific_heat),
+        density=Quantity(6.86, _unit_density)
     ),
     Compound(
         'Carbon-tetraflouride',
-        molecular_structure=MolecularStructure.POLYATOMIC,
-        specific_heat=0.1654,
-        density=3.926
+        molecular_structure=POLYATOMIC,
+        specific_heat=Quantity(0.1654, _unit_specific_heat),
+        density=Quantity(3.926, _unit_density)
     ),
     Compound(
         'Chlorine',
         symbol='Cl_2',
-        molecular_structure=MolecularStructure.DIATOMIC,
-        specific_heat=0.1144,
-        density=3.163
+        molecular_structure=DIATOMIC,
+        specific_heat=Quantity(0.1144, _unit_specific_heat),
+        density=Quantity(3.163, _unit_density)
     ),
     Compound(
         'Cyanogen',
-        molecular_structure=MolecularStructure.POLYATOMIC,
-        specific_heat=0.2613,
-        density=2.322
+        molecular_structure=POLYATOMIC,
+        specific_heat=Quantity(0.2613, _unit_specific_heat),
+        density=Quantity(2.322, _unit_density)
     ),
     Compound(
         'Deuterium',
         symbol='H_2/D_2',
-        molecular_structure=MolecularStructure.DIATOMIC,
-        specific_heat=1.722,
-        density=0.1799
+        molecular_structure=DIATOMIC,
+        specific_heat=Quantity(1.722, _unit_specific_heat),
+        density=Quantity(0.1799, _unit_density)
     ),
     Compound(
         'Ethane',
         symbol='C_2H_6',
-        molecular_structure=MolecularStructure.POLYATOMIC,
-        specific_heat=0.4097,
-        density=1.342
+        molecular_structure=POLYATOMIC,
+        specific_heat=Quantity(0.4097, _unit_specific_heat),
+        density=Quantity(1.342, _unit_density)
     ),
     Compound(
         'Fluorine',
         symbol='F_2',
-        molecular_structure=MolecularStructure.DIATOMIC,
-        specific_heat=0.1873,
-        density=1.695
+        molecular_structure=DIATOMIC,
+        specific_heat=Quantity(0.1873, _unit_specific_heat),
+        density=Quantity(1.695, _unit_density)
     ),
     Compound(
         'Helium',
         symbol='He',
-        molecular_structure=MolecularStructure.MONATOMIC,
-        specific_heat=1.241,
-        density=0.1786,
+        molecular_structure=MONATOMIC,
+        specific_heat=Quantity(1.241, _unit_specific_heat),
+        density=Quantity(0.1786, _unit_density),
         _analyte=False,
         order=2
     ),
     Compound(
         'Hexane',
         symbol='C_6H14',
-        molecular_structure=MolecularStructure.POLYATOMIC,
-        specific_heat=0.54,
-        density=0.672
+        molecular_structure=POLYATOMIC,
+        specific_heat=Quantity(0.54, _unit_specific_heat),
+        density=Quantity(0.672, _unit_density)
     ),
     Compound(
         'Hydrogen',
         symbol='H_2',
-        molecular_structure=MolecularStructure.DIATOMIC,
-        specific_heat=3.3852,
-        density=0.0899
+        molecular_structure=DIATOMIC,
+        specific_heat=Quantity(3.3852, _unit_specific_heat),
+        density=Quantity(0.0899, _unit_density)
     ),
     Compound(
         'Hydrogen-chloride',
         symbol='HCl',
-        molecular_structure=MolecularStructure.DIATOMIC,
-        specific_heat=0.1912,
-        density=1.627
+        molecular_structure=DIATOMIC,
+        specific_heat=Quantity(0.1912, _unit_specific_heat),
+        density=Quantity(1.627, _unit_density)
     ),
     Compound(
         'Hydrogen-fluoride',
         symbol='HF',
-        molecular_structure=MolecularStructure.DIATOMIC,
-        specific_heat=0.3479,
-        density=0.893
+        molecular_structure=DIATOMIC,
+        specific_heat=Quantity(0.3479, _unit_specific_heat),
+        density=Quantity(0.893, _unit_density)
     ),
     Compound(
         'Methane',
         symbol='CH_4',
-        molecular_structure=MolecularStructure.POLYATOMIC,
-        specific_heat=0.5223,
-        density=0.716
+        molecular_structure=POLYATOMIC,
+        specific_heat=Quantity(0.5223, _unit_specific_heat),
+        density=Quantity(0.716, _unit_density)
     ),
     Compound(
         'Neon',
         symbol='Ne',
-        molecular_structure=MolecularStructure.MONATOMIC,
-        specific_heat=0.246,
-        density=0.9,
+        molecular_structure=MONATOMIC,
+        specific_heat=Quantity(0.246, _unit_specific_heat),
+        density=Quantity(0.9, _unit_density),
         _analyte=False,
         order=2
     ),
     Compound(
         'Nitric-oxide',
         symbol='NO',
-        molecular_structure=MolecularStructure.DIATOMIC,
-        specific_heat=0.2328,
-        density=1.339
+        molecular_structure=DIATOMIC,
+        specific_heat=Quantity(0.2328, _unit_specific_heat),
+        density=Quantity(1.339, _unit_density)
     ),
     Compound(
         'Nitric-oxides',
@@ -540,54 +545,55 @@ registry = _GasRegistry([
     Compound(
         'Nitrogen-dioxide',
         symbol='NO_2',
-        molecular_structure=MolecularStructure.TRIATOMIC,
-        specific_heat=0.1933,
-        density=2.052
+        molecular_structure=TRIATOMIC,
+        specific_heat=Quantity(0.1933, _unit_specific_heat),
+        density=Quantity(2.052, _unit_density)
     ),
     Compound(
         'Nitrous-oxide',
         symbol='N_2O',
-        molecular_structure=MolecularStructure.TRIATOMIC,
-        specific_heat=0.2088,
-        density=1.964
+        molecular_structure=TRIATOMIC,
+        specific_heat=Quantity(0.2088, _unit_specific_heat),
+        density=Quantity(1.964, _unit_density)
     ),
     Compound(
         'Phosphine',
         symbol='PH_3',
-        molecular_structure=MolecularStructure.POLYATOMIC,
-        specific_heat=0.2374,
-        density=1.517
+        molecular_structure=POLYATOMIC,
+        specific_heat=Quantity(0.2374, _unit_specific_heat),
+        density=Quantity(1.517, _unit_density)
     ),
     Compound(
         'Propane',
         symbol='C_3H_8',
-        molecular_structure=MolecularStructure.POLYATOMIC,
-        specific_heat=0.3885,
-        density=1.967
+        molecular_structure=POLYATOMIC,
+        specific_heat=Quantity(0.3885, _unit_specific_heat),
+        density=Quantity(1.967, _unit_density)
     ),
     Compound(
         'Propylene',
         symbol='C_3H_6',
-        molecular_structure=MolecularStructure.POLYATOMIC,
-        specific_heat=0.3541,
-        density=1.877
+        molecular_structure=POLYATOMIC,
+        specific_heat=Quantity(0.3541, _unit_specific_heat),
+        density=Quantity(1.877, _unit_density)
     ),
     Compound(
         'Sulfur hexaflouride',
         symbol='SF_6',
-        molecular_structure=MolecularStructure.POLYATOMIC,
-        specific_heat=0.1592,
-        density=6.516
+        molecular_structure=POLYATOMIC,
+        specific_heat=Quantity(0.1592, _unit_specific_heat),
+        density=Quantity(6.516, _unit_density)
     ),
     Compound(
         'Xenon',
         symbol='Xe',
-        molecular_structure=MolecularStructure.MONATOMIC,
-        specific_heat=0.0378,
-        density=5.858,
+        molecular_structure=MONATOMIC,
+        specific_heat=Quantity(0.0378, _unit_specific_heat),
+        density=Quantity(5.858, _unit_density),
         _analyte=False,
         order=2
     ),
     nitrogen,
-    oxygen
+    oxygen,
+    air
 ])
