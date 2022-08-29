@@ -4,22 +4,14 @@ import functools
 import typing
 from datetime import timedelta
 
-# noinspection PyPackageRequirements
 import pint
-# noinspection PyPackageRequirements
 import pint.formatting
-
-try:
-    import pint_pandas
-except ImportError:
-    pint_pandas = None
+import pint.registry
 
 
 __all__ = [
     'converter',
     'dimensionless',
-    'is_quantity',
-    'is_unit',
     'parse',
     'parse_magnitude',
     'parse_timedelta',
@@ -36,6 +28,12 @@ __all__ = [
     'TParseUnit',
     'Unit'
 ]
+
+
+# Type hints
+TParseQuantity = typing.Union['Quantity', str, float, int]
+TParseUnit = typing.Union['Unit', 'Quantity', str]
+TParseTimeDelta = typing.Union[timedelta, 'Quantity', str, float, int]
 
 
 class UnitError(Exception):
@@ -82,7 +80,10 @@ class Quantity(pint.Quantity[float]):
     _REGISTRY = registry
     _DISTANCE_MAX = 1000.0
 
-    def to_compact(self, unit=None) -> Quantity:
+    def to_compact(self, unit: typing.Optional[Unit] = None) -> Quantity:
+        if unit is not None:
+            return super().to_compact(unit)
+
         if self.units == dimensionless:
             # Make copy
             return self.to(dimensionless)
@@ -135,7 +136,9 @@ class Quantity(pint.Quantity[float]):
         return formatted
 
 
-class Unit(registry.Unit):
+class Unit(pint.Unit):
+    _REGISTRY = registry
+
     def __format__(self, spec: str) -> str:
         if self == registry.percent:
             return '%'
@@ -143,7 +146,9 @@ class Unit(registry.Unit):
         return super().__format__(spec)
 
 
-class Measurement(registry.Measurement):
+class Measurement(pint.Measurement):
+    _REGISTRY = registry
+
     def __format__(self, format_spec: str) -> str:
         format_spec = format_spec or self.default_format
 
@@ -212,52 +217,17 @@ registry.default_format = 'g~#gasify'
 pint.set_application_registry(registry)
 
 
-# Shortcuts
-Quantity = registry.Quantity
-Unit = registry.Unit
-
-
-# Setup pint arrays (experimental)
-if pint_pandas is not None:
-    # noinspection PyUnresolvedReferences
-    pint_pandas.PintType.ureg = registry
-
-
-# Type hints
-TParseQuantity = typing.Union[Quantity, str, float, int]
-TParseUnit = typing.Union[Unit, Quantity, str]
-TParseTimeDelta = typing.Union[timedelta, Quantity, str, float, int]
-
-
-def is_quantity(x: typing.Any) -> bool:
-    """ Test if object is an instance of Quantity.
-
-    :param x: object to test
-    :return: True if x is an instance of Quantity or a subclass of Quantity
-    """
-    return isinstance(x, Quantity)
-
-
-def is_unit(x: typing.Any) -> bool:
-    """ Test if object is an instance of Unit.
-
-    :param x: object to test
-    :return: True if x is an instance of Unit or a subclass of Unit
-    """
-    return isinstance(x, Unit)
-
-
 def parse_unit(x: TParseUnit) -> Unit:
     """ Parse arbitrary input to a Unit from the registry.
 
     :param x: input str
     :return: parsed Unit
     """
-    if is_unit(x):
+    if isinstance(x, Unit):
         # Already a Unit
         return x
 
-    if is_quantity(x):
+    if isinstance(x, Quantity):
         # Extract Unit, can sometimes occur when using values from pint
         return x.units
 
@@ -286,7 +256,7 @@ def parse(x: TParseQuantity, to_unit: typing.Optional[TParseUnit] = None,
     if to_unit is not None:
         to_unit = parse_unit(to_unit)
 
-    if not is_quantity(x):
+    if not isinstance(x, Quantity):
         # Convert int to float
         if isinstance(x, int):
             x = float(x)
@@ -403,7 +373,7 @@ def return_converter(to_unit: TParseUnit, allow_none: bool = False):
 
                 return None
 
-            if not is_quantity(result):
+            if not isinstance(result, Quantity):
                 result = parse(result, to_unit)
             else:
                 result.ito(to_unit)
