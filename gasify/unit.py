@@ -55,7 +55,7 @@ class ParseError(UnitError, ValueError):
 
 
 # Handler for percent sign and micro symbol
-def _handle_symbols(x):
+def _handle_symbols(x: str) -> str:
     return x.replace('%', ' percent ').replace('μ', 'u')
 
 
@@ -78,7 +78,8 @@ registry.define('@alias sccm = SCCM')
 # registry.define('@alias m ** 3 = m3/d')
 
 
-class Quantity(registry.Quantity):
+class Quantity(pint.Quantity[float]):
+    _REGISTRY = registry
     _DISTANCE_MAX = 1000.0
 
     def to_compact(self, unit=None) -> Quantity:
@@ -120,7 +121,7 @@ class Quantity(registry.Quantity):
         if spec == '':
             spec = self.default_format
 
-        formatted = super().__format__(spec)
+        formatted: str = super().__format__(spec)
 
         if ' ' not in formatted:
             return formatted
@@ -172,6 +173,12 @@ class Measurement(registry.Measurement):
         return mstr + ' ' + format(obj.units, uspec)
 
 
+# Handles to original types
+BaseQuantity = registry.Quantity
+BaseUnit = registry.Unit
+BaseMeasurement = registry.Measurement
+
+
 registry.Quantity = Quantity
 registry.Unit = Unit
 registry.Measurement = Measurement
@@ -183,7 +190,7 @@ dimensionless = registry.dimensionless
 # Change default printing format
 # noinspection PyShadowingNames,PyUnusedLocal
 @pint.register_unit_format('gasify')
-def format_custom(unit, registry, **options):
+def format_custom(unit, registry: pint.registry.BaseRegistry, **options: typing.Any) -> str:
     unit_str = pint.formatter(
         unit.items(),
         as_ratio=True,
@@ -364,7 +371,7 @@ def converter(to_unit: typing.Optional[TParseUnit] = None,
     """
     to_unit = to_unit or dimensionless
 
-    def f(x: typing.Optional[TParseQuantity]):
+    def f(x: typing.Optional[TParseQuantity]) -> typing.Optional[Quantity]:
         if x is None:
             if not optional:
                 raise ParseError('Input to converter cannot be None')
@@ -387,7 +394,7 @@ def return_converter(to_unit: TParseUnit, allow_none: bool = False):
 
     def wrapper_decorator(func):
         @functools.wraps(func)
-        def wrapper_result(*args, **kwargs):
+        def wrapper_result(*args: typing.Any, **kwargs: typing.Any):
             result = func(*args, **kwargs)
 
             if result is None:
