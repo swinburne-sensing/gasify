@@ -82,7 +82,7 @@ class Compound(_GasRegistryEntry):
         if isinstance(other, (int, float, str, Quantity)):
             return CompoundConcentration(parse(other), self)
 
-        raise NotImplemented
+        return NotImplemented
 
     __rmul__ = __mul__
 
@@ -101,28 +101,28 @@ class Compound(_GasRegistryEntry):
         if isinstance(other, self.__class__):
             return (self.order, self.name) < (other.order, other.name)
 
-        raise NotImplemented
+        return NotImplemented
 
     def __le__(self, other: Any) -> bool:
         # Sort by order then name
         if isinstance(other, self.__class__):
             return (self.order, self.name) <= (other.order, other.name)
 
-        raise NotImplemented
+        return NotImplemented
 
     def __gt__(self, other: Any) -> bool:
         # Sort by order then name
         if isinstance(other, self.__class__):
             return (self.order, self.name) > (other.order, other.name)
 
-        raise NotImplemented
+        return NotImplemented
 
     def __ge__(self, other: Any) -> bool:
         # Sort by order then name
         if isinstance(other, self.__class__):
             return (self.order, self.name) >= (other.order, other.name)
 
-        raise NotImplemented
+        return NotImplemented
 
     def __str__(self) -> str:
         if self.symbol is not None:
@@ -157,11 +157,11 @@ class CompoundConcentration:
         if isinstance(other, (int, float, str, Quantity)):
             return CompoundConcentration(self.concentration / parse(other), self.compound)
 
-        raise NotImplemented
+        return NotImplemented
 
     def __mul__(self, other: Any) -> CompoundConcentration:
         if not isinstance(other, (int, float, str, Quantity)):
-            raise NotImplemented
+            return NotImplemented
 
         return CompoundConcentration(parse(other) * self.concentration, self.compound)
 
@@ -188,7 +188,7 @@ class CompoundConcentration:
         elif isinstance(other, (int, float, str, Quantity)):
             return bool(self.concentration < parse(other))
 
-        raise NotImplemented
+        return NotImplemented
 
     def __le__(self, other: Any) -> bool:
         if isinstance(other, self.__class__):
@@ -199,7 +199,7 @@ class CompoundConcentration:
         elif isinstance(other, (int, float, str, Quantity)):
             return bool(self.concentration <= parse(other))
 
-        raise NotImplemented
+        return NotImplemented
 
     def __gt__(self, other: Any) -> bool:
         if isinstance(other, self.__class__):
@@ -210,7 +210,7 @@ class CompoundConcentration:
         elif isinstance(other, (int, float, str, Quantity)):
             return bool(self.concentration > parse(other))
 
-        raise NotImplemented
+        return NotImplemented
 
     def __ge__(self, other: Any) -> bool:
         if isinstance(other, self.__class__):
@@ -221,7 +221,7 @@ class CompoundConcentration:
         elif isinstance(other, (int, float, str, Quantity)):
             return bool(self.concentration >= parse(other))
 
-        raise NotImplemented
+        return NotImplemented
 
     def __str__(self) -> str:
         return f"{self.concentration} {self.compound}"
