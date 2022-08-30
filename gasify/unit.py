@@ -97,11 +97,11 @@ class Quantity(pint.Quantity[float]):
 
     def to_compact(self, unit: typing.Optional[Unit] = None) -> Quantity:
         if unit is not None:
-            return super().to_compact(unit)
+            return Quantity(super().to_compact(unit))
 
         if self.units == dimensionless:
             # Make copy
-            return self.to(dimensionless)
+            return typing.cast(Quantity, self.to(dimensionless))
 
         if self.is_compatible_with(registry.meter) and self.m_as(registry.kilometer) >= self._DISTANCE_MAX:
             # Clamp distances to kilometers
@@ -302,7 +302,7 @@ def parse(x: TParseQuantity, to_unit: typing.Optional[TParseUnit] = None,
 
     if mag_round is not None:
         # Round resulting value
-        x = round(x, mag_round)
+        x = typing.cast(Quantity, round(x, mag_round))
 
     return x
 
