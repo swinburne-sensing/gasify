@@ -169,12 +169,6 @@ class CompoundConcentrationTestCase(unittest.TestCase):
             b = unit.Quantity(2, unit.dimensionless)
             self.assertConcentration(a / b, 0.5, gas.registry.oxygen)
 
-    def test_equal(self):
-        a = 1.0 * gas.registry.oxygen
-        b = 1.0 * gas.registry.oxygen
-
-        self.assertEqual(a, b)
-
     def test_mul(self):
         a = 0.5 * gas.registry.oxygen
 
