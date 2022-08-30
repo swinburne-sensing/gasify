@@ -231,7 +231,7 @@ class Mixture(_GasRegistryEntry):
     content: Tuple[CompoundConcentration]
 
     # Mixture name
-    name: Optional[str] = field(default=None, kw_only=True)
+    name: Optional[str] = field(default=None)
 
     def __init__(self, *content: CompoundConcentration, name: Optional[str] = None):
         # Combine parts by compound
@@ -376,6 +376,7 @@ air = Mixture.auto_balance(
 )
 
 
+# noinspection PyAbstractClass
 class _GasRegistry(storage.Registry[_GasRegistryEntry]):
     pass
 
