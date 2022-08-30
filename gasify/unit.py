@@ -30,6 +30,21 @@ __all__ = [
 ]
 
 
+# Get split_format from pint.formatting, or implement a simplified version for Python 3.7 compatibility
+if hasattr(pint.formatting, 'split_format'):
+    _split_format = pint.formatting.split_format
+else:
+    def _split_format(spec: str, default: str, separate_format_defaults: bool = True) -> typing.Tuple[str, str]:
+        mspec = pint.formatting.remove_custom_flags(spec)
+        uspec = pint.formatting.extract_custom_flags(spec)
+
+        if separate_format_defaults:
+            mspec = mspec if mspec else pint.formatting.remove_custom_flags(default)
+            uspec = uspec if uspec else pint.formatting.extract_custom_flags(default)
+
+        return mspec, uspec
+
+
 # Type hints
 TParseQuantity = typing.Union['Quantity', str, float, int]
 TParseUnit = typing.Union['Unit', 'Quantity', str]
@@ -152,8 +167,13 @@ class Measurement(pint.Measurement):
     def __format__(self, format_spec: str) -> str:
         format_spec = format_spec or self.default_format
 
-        mspec, uspec = pint.formatting.split_format(
-            format_spec, self.default_format, self._REGISTRY.separate_format_defaults
+        if hasattr(self._REGISTRY, 'separate_format_defaults'):
+            separate_format_defaults = self._REGISTRY.separate_format_defaults
+        else:
+            separate_format_defaults = True
+
+        mspec, uspec = _split_format(
+            format_spec, self.default_format, separate_format_defaults
         )
 
         if '#' in mspec:
