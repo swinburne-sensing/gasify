@@ -46,14 +46,14 @@ class Compound(_GasRegistryEntry):
 
     # Gas chemical symbol and other names
     symbol: Optional[str] = field(default=None)
-    alias: FrozenSet[str] = field(default_factory=frozenset, kw_only=True)
+    alias: FrozenSet[str] = field(default_factory=frozenset)
 
-    molecular_structure: Optional[float] = field(default=None, kw_only=True)
-    specific_heat: Optional[Quantity] = field(default=None, kw_only=True)
-    density: Optional[Quantity] = field(default=None, kw_only=True)
+    molecular_structure: Optional[float] = field(default=None)
+    specific_heat: Optional[Quantity] = field(default=None)
+    density: Optional[Quantity] = field(default=None)
 
-    _analyte: bool = field(default=True, kw_only=True)
-    order: int = field(default=0, kw_only=True)
+    _analyte: bool = field(default=True)
+    order: int = field(default=0)
 
     @property
     def analyte(self) -> bool:
