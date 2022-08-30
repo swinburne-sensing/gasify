@@ -4,12 +4,11 @@ from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from collections.abc import Iterable as abc_Iterable
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any, Dict, FrozenSet, Iterable, Iterator, Optional, Set, Tuple, Union, cast
 
 from plenary import storage
 
-from gasify.unit import TParseQuantity, Quantity, dimensionless, parse, registry as unit_registry
+from gasify.unit import Quantity, dimensionless, parse, registry as unit_registry
 
 
 _unit_specific_heat = unit_registry.cal / unit_registry.g
